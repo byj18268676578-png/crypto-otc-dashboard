@@ -30,7 +30,10 @@
         </div>
         <div class="main">
             <div class="chart-container">
-                <h3>场外指数与爆破指数趋势图</h3>
+                <h3>
+                    场外指数与爆破指数趋势图
+                    <span id="day-info" class="status-label"></span>
+                </h3>
                 <canvas id="combinedChart"></canvas>
             </div>
         </div>
@@ -48,6 +51,13 @@
             const status = coinData.status;
             const statusClass = status.includes('entry') ? 'status-entry' : 'status-exit';
             const statusText = status.includes('entry') ? '进场期' : '退场期';
+            
+            // 提取天数
+            const dayMatch = status.match(/-(\d+)/);
+            const dayInfo = dayMatch ? `${statusText}第 ${dayMatch[1]} 天` : statusText;
+            
+            document.getElementById('day-info').textContent = dayInfo;
+            document.getElementById('day-info').className = `status-label ${statusClass}`;
             
             document.getElementById('coin-list').innerHTML = priority.map(coin => 
                 `<div class="coin-item ${coin === currentCoin ? 'active' : ''}" onclick="selectCoin('${coin}')">${coin}</div>`
