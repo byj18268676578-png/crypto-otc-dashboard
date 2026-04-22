@@ -30,12 +30,8 @@
         </div>
         <div class="main">
             <div class="chart-container">
-                <h3>场外指数 (OTC Index)</h3>
-                <canvas id="otcChart"></canvas>
-            </div>
-            <div class="chart-container">
-                <h3>爆破指数 (Explosion Index)</h3>
-                <canvas id="explosionChart"></canvas>
+                <h3>场外指数与爆破指数趋势图</h3>
+                <canvas id="combinedChart"></canvas>
             </div>
         </div>
     </div>
@@ -57,36 +53,73 @@
                 `<div class="coin-item ${coin === currentCoin ? 'active' : ''}" onclick="selectCoin('${coin}')">${coin}</div>`
             ).join('');
             
-            new Chart(document.getElementById('otcChart'), {
+            new Chart(document.getElementById('combinedChart'), {
                 type: 'line',
                 data: {
                     labels: coinData.dates,
-                    datasets: [{
-                        label: '场外指数',
-                        data: coinData.otc,
-                        borderColor: '#4fc3f7',
-                        backgroundColor: 'rgba(79, 195, 247, 0.1)',
-                        fill: true,
-                        tension: 0.4
-                    }]
+                    datasets: [
+                        {
+                            label: '场外指数',
+                            data: coinData.otc,
+                            borderColor: '#4fc3f7',
+                            backgroundColor: 'rgba(79, 195, 247, 0.1)',
+                            yAxisID: 'y',
+                            fill: true,
+                            tension: 0.4
+                        },
+                        {
+                            label: '爆破指数',
+                            data: coinData.explosion,
+                            borderColor: '#ff9800',
+                            backgroundColor: 'rgba(255, 152, 0, 0.1)',
+                            yAxisID: 'y1',
+                            fill: true,
+                            tension: 0.4
+                        }
+                    ]
                 },
-                options: { responsive: true, plugins: { legend: { display: false } } }
-            });
-            
-            new Chart(document.getElementById('explosionChart'), {
-                type: 'line',
-                data: {
-                    labels: coinData.dates,
-                    datasets: [{
-                        label: '爆破指数',
-                        data: coinData.explosion,
-                        borderColor: '#ffeb3b',
-                        backgroundColor: 'rgba(255, 235, 59, 0.1)',
-                        fill: true,
-                        tension: 0.4
-                    }]
-                },
-                options: { responsive: true, plugins: { legend: { display: false } } }
+                options: {
+                    responsive: true,
+                    interaction: {
+                        mode: 'index',
+                        intersect: false,
+                    },
+                    plugins: {
+                        legend: {
+                            labels: { color: '#fff' }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: { color: 'rgba(255, 255, 255, 0.1)' },
+                            ticks: { color: '#fff' }
+                        },
+                        y: {
+                            type: 'linear',
+                            display: true,
+                            position: 'left',
+                            grid: { color: 'rgba(255, 255, 255, 0.1)' },
+                            ticks: { color: '#4fc3f7' },
+                            title: {
+                                display: true,
+                                text: '场外指数',
+                                color: '#4fc3f7'
+                            }
+                        },
+                        y1: {
+                            type: 'linear',
+                            display: true,
+                            position: 'right',
+                            grid: { color: 'rgba(255, 255, 255, 0.1)' },
+                            ticks: { color: '#ff9800' },
+                            title: {
+                                display: true,
+                                text: '爆破指数',
+                                color: '#ff9800'
+                            }
+                        }
+                    }
+                }
             });
         }
         
