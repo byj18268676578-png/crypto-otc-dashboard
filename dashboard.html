@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crypto OTC Index Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #0f0f23; color: #fff; }
+        .container { display: flex; height: 100vh; }
+        .sidebar { width: 200px; background: #1a1a2e; padding: 20px; overflow-y: auto; }
+        .sidebar h2 { font-size: 18px; margin-bottom: 20px; color: #4fc3f7; }
+        .coin-item { padding: 10px; cursor: pointer; border-radius: 8px; margin-bottom: 8px; transition: background 0.3s; }
+        .coin-item:hover { background: #2a2a4e; }
+        .coin-item.active { background: #4fc3f7; color: #000; }
+        .main { flex: 1; padding: 20px; overflow-y: auto; }
+        .chart-container { background: #1a1a2e; border-radius: 12px; padding: 20px; margin-bottom: 20px; }
+        .chart-container h3 { margin-bottom: 15px; color: #4fc3f7; }
+        .status-label { display: inline-block; padding: 4px 12px; border-radius: 4px; font-size: 12px; margin-left: 10px; }
+        .status-entry { background: #4caf50; color: #fff; }
+        .status-exit { background: #f44336; color: #fff; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="sidebar">
+            <h2>🪙 币种选择</h2>
+            <div id="coin-list"></div>
+        </div>
+        <div class="main">
+            <div class="chart-container">
+                <h3>场外指数 (OTC Index)</h3>
+                <canvas id="otcChart"></canvas>
+            </div>
+            <div class="chart-container">
+                <h3>爆破指数 (Explosion Index)</h3>
+                <canvas id="explosionChart"></canvas>
+            </div>
+        </div>
+    </div>
+    <script>
+        const allData = {"BTC": {"dates": ["4.8", "4.9", "4.10", "4.11", "4.13", "4.14", "4.15", "4.16", "4.17", "4.18", "4.20", "4.22"], "otc": [984, 986, 1002, 976, 1031, 1233, 1231, 1268, 1366, 1242, 1245, 1694], "explosion": [226, 194, 209, 217, 159, 233, 204, 186, 240, 212, 176, 240], "status": "entry-11"}, "ETH": {"dates": ["4.8", "4.9", "4.10", "4.11", "4.13", "4.14", "4.15", "4.16", "4.17", "4.18", "4.20", "4.22"], "otc": [1195, 1152, 1115, 1004, 1123, 1369, 1320, 1351, 1408, 1271, 1229, 1545], "explosion": [268, 193, 191, 228, 165, 259, 213, 190, 240, 192, 151, 197], "status": "entry-14"}, "BNB": {"dates": ["4.8", "4.9", "4.10", "4.11", "4.13", "4.14", "4.15", "4.16", "4.17", "4.18", "4.20", "4.22"], "otc": [819, 781, 741, 723, 783, 901, 917, 966, 1007, 923, 899, 1189], "explosion": [89, 39, 45, 71, 49, 176, 203, 189, 299, 226, 178, 231], "status": "entry-8"}, "SOL": {"dates": ["4.22"], "otc": [1230], "explosion": [209], "status": "entry-5"}, "DOGE": {"dates": ["4.22"], "otc": [1517], "explosion": [217], "status": "entry-8"}, "LTC": {"dates": ["4.22"], "otc": [1172], "explosion": [217], "status": "entry-5"}, "CRV": {"dates": ["4.22"], "otc": [1552], "explosion": [240], "status": "entry-5"}, "LINK": {"dates": ["4.22"], "otc": [1392], "explosion": [204], "status": "entry-5"}, "ADA": {"dates": ["4.22"], "otc": [1202], "explosion": [181], "status": "exit-29"}, "UNI": {"dates": ["4.22"], "otc": [1144], "explosion": [217], "status": "exit-33"}, "AAVE": {"dates": ["4.22"], "otc": [923], "explosion": [55], "status": "exit-3"}, "AVAX": {"dates": ["4.22"], "otc": [1398], "explosion": [194], "status": "entry-1"}, "PEPE": {"dates": ["4.22"], "otc": [1542], "explosion": [203], "status": "entry-5"}, "SUI": {"dates": ["4.22"], "otc": [1463], "explosion": [174], "status": "exit-29"}, "SEI": {"dates": ["4.22"], "otc": [1457], "explosion": [355], "status": "exit-207"}, "HYPE": {"dates": ["4.22"], "otc": [1367], "explosion": [94], "status": "entry-14"}, "TRUMP": {"dates": ["4.22"], "otc": [1127], "explosion": [154], "status": "exit-31"}, "PUMP": {"dates": ["4.22"], "otc": [1329], "explosion": [154], "status": "entry-12"}, "ZEC": {"dates": ["4.22"], "otc": [1544], "explosion": [107], "status": "entry-14"}};
+        const priority = ["BTC", "ETH", "BNB", "SOL", "DOGE", "LTC", "CRV", "LINK", "ADA", "UNI", "AAVE", "AVAX", "PEPE", "SUI", "SEI", "HYPE", "TRUMP", "PUMP", "ZEC"];
+        
+        let currentCoin = priority[0];
+        
+        function renderChart() {
+            const coinData = allData[currentCoin];
+            if (!coinData) return;
+            
+            const status = coinData.status;
+            const statusClass = status.includes('entry') ? 'status-entry' : 'status-exit';
+            const statusText = status.includes('entry') ? '进场期' : '退场期';
+            
+            document.getElementById('coin-list').innerHTML = priority.map(coin => 
+                `<div class="coin-item ${coin === currentCoin ? 'active' : ''}" onclick="selectCoin('${coin}')">${coin}</div>`
+            ).join('');
+            
+            new Chart(document.getElementById('otcChart'), {
+                type: 'line',
+                data: {
+                    labels: coinData.dates,
+                    datasets: [{
+                        label: '场外指数',
+                        data: coinData.otc,
+                        borderColor: '#4fc3f7',
+                        backgroundColor: 'rgba(79, 195, 247, 0.1)',
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: { responsive: true, plugins: { legend: { display: false } } }
+            });
+            
+            new Chart(document.getElementById('explosionChart'), {
+                type: 'line',
+                data: {
+                    labels: coinData.dates,
+                    datasets: [{
+                        label: '爆破指数',
+                        data: coinData.explosion,
+                        borderColor: '#ffeb3b',
+                        backgroundColor: 'rgba(255, 235, 59, 0.1)',
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: { responsive: true, plugins: { legend: { display: false } } }
+            });
+        }
+        
+        function selectCoin(coin) {
+            currentCoin = coin;
+            renderChart();
+        }
+        
+        renderChart();
+    </script>
+</body>
+</html>
